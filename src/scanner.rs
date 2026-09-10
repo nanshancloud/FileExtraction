@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use walkdir::WalkDir;
 
-/// 扫描结果中的单个文件
+/// A single file in the scan results
 #[derive(Clone)]
 pub struct FileEntry {
     pub name: String,
@@ -14,31 +14,32 @@ pub struct FileEntry {
     pub size: u64,
 }
 
-/// 后台扫描状态：工作线程通过共享内存写入结果
+/// Background scan state: the worker thread writes results into shared memory
 pub struct ScanState {
     entries: Arc<Mutex<Vec<FileEntry>>>,
     done: Arc<AtomicBool>,
 }
 
 impl ScanState {
-    /// 是否已完成（完成后可通过 take_result 取走全部结果）
+    /// Whether the scan has finished (call take_result afterwards to collect results)
     pub fn is_done(&self) -> bool {
         self.done.load(Ordering::Relaxed)
     }
 
-    /// 当前已扫描到的文件数（用于进度提示）
+    /// Number of files found so far (used as progress hint)
     pub fn current_len(&self) -> usize {
         self.entries.lock().unwrap().len()
     }
 
-    /// 取走扫描结果（仅在 is_done 为 true 后调用）
+    /// Take the scan results (only call after is_done returns true)
     pub fn take_result(&self) -> Vec<FileEntry> {
         std::mem::take(&mut *self.entries.lock().unwrap())
     }
 }
 
-/// 启动后台线程递归扫描目录，返回可轮询的状态句柄。
-/// 扫描在独立线程中进行，不阻塞 UI；完成后通过 ctx 请求重绘。
+/// Spawn a background thread that recursively scans a directory and return a
+/// pollable state handle. The scan runs on its own thread and does not block the
+/// UI; when finished it requests a repaint through `ctx`.
 pub fn start_scan(dir: PathBuf, exts: HashSet<String>, ctx: &egui::Context) -> ScanState {
     let entries = Arc::new(Mutex::new(Vec::new()));
     let done = Arc::new(AtomicBool::new(false));

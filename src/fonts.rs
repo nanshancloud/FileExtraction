@@ -1,6 +1,6 @@
 use eframe::egui;
 
-/// 在 Windows 系统字体目录中寻找可用的中文字体文件
+/// Look for a usable CJK font file in the Windows system font directory
 fn load_cjk_font_bytes() -> Option<Vec<u8>> {
     const PREFERRED: &[&str] = &[
         r"C:\Windows\Fonts\simhei.ttf",
@@ -15,7 +15,8 @@ fn load_cjk_font_bytes() -> Option<Vec<u8>> {
             return Some(bytes);
         }
     }
-    // 兜底：扫描 Fonts 目录，挑第一个含中文/常见 CJK 字体名的 ttf/ttc/otf
+    // Fallback: scan the Fonts directory and pick the first ttf/ttc/otf whose
+    // name looks like a common CJK font
     if let Ok(rd) = std::fs::read_dir(r"C:\Windows\Fonts") {
         for entry in rd.flatten() {
             let name = entry.file_name().to_string_lossy().to_lowercase();
@@ -39,8 +40,9 @@ fn load_cjk_font_bytes() -> Option<Vec<u8>> {
     None
 }
 
-/// 将中文字体注册到 egui 的 Proportional / Monospace 字体回退链，
-/// 缺字形时自动回退，保证中日韩文本正常渲染
+/// Register a CJK font at the end of the egui Proportional / Monospace font
+/// fallback chain so that missing glyphs fall back automatically and CJK text
+/// renders correctly
 pub fn setup_cjk_fonts(ctx: &egui::Context) {
     let Some(bytes) = load_cjk_font_bytes() else {
         eprintln!("CJK font not found; CJK text may render as boxes");

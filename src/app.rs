@@ -7,10 +7,38 @@ use egui_extras::{Column, TableBuilder};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-/// 应用主状态
+/// Open a file with the system default associated program (double-click action)
+fn open_file(path: &str) {
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("explorer").arg(path).spawn();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = std::process::Command::new("xdg-open").arg(path).spawn();
+    }
+}
+
+/// Open the containing folder of a file (on Windows, locate and select the file)
+fn open_containing_folder(path: &str) {
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("explorer")
+            .arg(format!("/select,{path}"))
+            .spawn();
+    }
+    #[cfg(not(windows))]
+    {
+        if let Some(parent) = PathBuf::from(path).parent() {
+            let _ = std::process::Command::new("xdg-open").arg(parent).spawn();
+        }
+    }
+}
+
+/// Main application state
 pub struct FileSearchApp {
     lang: Lang,
-    /// 首次运行时的语言选择弹窗
+    /// Whether to show the language picker dialog on first run
     need_pick_lang: bool,
     picker_lang: Lang,
     scan_dir: String,
@@ -19,7 +47,7 @@ pub struct FileSearchApp {
     selected: HashSet<String>,
     new_ext: String,
     keep_structure: bool,
-    /// 文件名搜索关键字（实时过滤表格）
+    /// File name search keyword (filters the table in real time)
     search: String,
     status: String,
     scan: Option<ScanState>,
@@ -30,7 +58,7 @@ impl FileSearchApp {
     pub fn new() -> Self {
         let config_path = config::config_path();
         let cfg: Config = config::load(&config_path);
-        // 默认英文；仅在已有配置时跳过语言选择
+        // English by default; skip language picker only when a saved config exists
         let lang = cfg.language.unwrap_or(Lang::En);
         let need_pick_lang = cfg.language.is_none();
 
@@ -132,7 +160,7 @@ impl FileSearchApp {
 
     fn export_files(&mut self) {
         let tr = self.tr();
-        // 1. 选择导出目录（文档将复制到该目录，清单也生成在该目录）
+        // 1. Choose export directory (documents are copied here, list is generated here too)
         let mut dialog = rfd::FileDialog::new().set_title(tr.pick_dir_title);
         if !self.scan_dir.trim().is_empty() {
             let dir = PathBuf::from(&self.scan_dir);
@@ -144,7 +172,7 @@ impl FileSearchApp {
             return;
         };
 
-        // 2. 复制文档 + 生成清单
+        // 2. Copy documents + generate the Excel list
         let result: ExportResult =
             exporter::export_files(&self.entries, &self.scan_dir, &out_dir, self.keep_structure, tr);
         self.status = self.build_export_status(&result, &out_dir, tr);
@@ -175,11 +203,11 @@ impl FileSearchApp {
 
 impl eframe::App for FileSearchApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // 首次运行：语言选择弹窗（界面文案跟随当前选择的语言实时切换）
+        // First run: language picker dialog (UI texts switch live with the selection)
         if self.need_pick_lang {
             let pt = self.picker_lang.tr();
 
-            // 半透明遮罩：拦截主界面交互，使弹窗具有模态效果
+            // Semi-transparent overlay: blocks interaction with the main UI for a modal effect
             let screen_rect = ctx.screen_rect();
             egui::Area::new(egui::Id::new("lang_picker_blocker"))
                 .order(egui::Order::Middle)
@@ -207,7 +235,7 @@ impl eframe::App for FileSearchApp {
                         ui.horizontal(|ui| {
                             ui.add_space(40.0);
                             ui.label(egui::RichText::new(pt.language).size(14.0));
-                            // 下拉框选项始终显示各语言自身的名称
+                            // Combo box options always show each language's native name
                             egui::ComboBox::from_id_salt("lang_picker")
                                 .width(200.0)
                                 .selected_text(self.picker_lang.native_name())
@@ -240,7 +268,7 @@ impl eframe::App for FileSearchApp {
         let tr = self.tr();
         self.poll_scan();
 
-        // 顶部工具栏
+        // Top toolbar
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
@@ -278,7 +306,7 @@ impl eframe::App for FileSearchApp {
                     self.save_config();
                 }
 
-                // 右上角：文件名搜索框，实时过滤表格
+                // Top-right corner: file name search box, filters the table in real time
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let clear_button = ui.add_enabled(
                         !self.search.is_empty(),
@@ -299,7 +327,7 @@ impl eframe::App for FileSearchApp {
             ui.add_space(4.0);
         });
 
-        // 底部状态栏
+        // Bottom status bar
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.separator();
             ui.horizontal(|ui| {
@@ -310,7 +338,7 @@ impl eframe::App for FileSearchApp {
             });
         });
 
-        // 左侧格式配置面板
+        // Left panel: file format settings
         egui::SidePanel::left("ext_panel")
             .default_width(230.0)
             .resizable(true)
@@ -378,7 +406,7 @@ impl eframe::App for FileSearchApp {
                 ui.separator();
                 ui.label(tf(tr.selected_count, &[&self.selected.len()]));
 
-                // 语言切换（运行中随时可改）
+                // Language switch (can be changed at any time while running)
                 ui.separator();
                 ui.horizontal(|ui| {
                     ui.label(tr.language);
@@ -401,7 +429,7 @@ impl eframe::App for FileSearchApp {
                 }
             });
 
-        // 中间结果表格（按搜索关键字过滤文件名）
+        // Central results table (filtered by search keyword on file name)
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.entries.is_empty() {
                 let msg = if self.scan.is_some() {
@@ -440,7 +468,10 @@ impl eframe::App for FileSearchApp {
                 .column(Column::initial(420.0).resizable(true))
                 .column(Column::exact(110.0))
                 .header(26.0, |mut header| {
-                    for t in [tr.col_no, tr.col_name, tr.col_path, tr.col_size] {
+                    // Column headers annotate the double-click actions for name/path columns
+                    let name_h = format!("{} ({})", tr.col_name, tr.col_name_dblclick);
+                    let path_h = format!("{} ({})", tr.col_path, tr.col_path_dblclick);
+                    for t in [tr.col_no, name_h.as_str(), path_h.as_str(), tr.col_size] {
                         header.col(|ui| {
                             ui.strong(t);
                         });
@@ -453,10 +484,18 @@ impl eframe::App for FileSearchApp {
                                 ui.monospace(format!("{}", i + 1));
                             });
                             row.col(|ui| {
-                                ui.label(&e.name);
+                                // Double-click opens the file with its default program
+                                let r = ui.label(&e.name);
+                                if r.double_clicked() {
+                                    open_file(&e.path);
+                                }
                             });
                             row.col(|ui| {
-                                ui.monospace(&e.path);
+                                // Double-click opens the containing folder (file gets selected)
+                                let r = ui.monospace(&e.path);
+                                if r.double_clicked() {
+                                    open_containing_folder(&e.path);
+                                }
                             });
                             row.col(|ui| {
                                 ui.label(exporter::human_size(e.size))

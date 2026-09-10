@@ -3,16 +3,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-/// 默认支持的扫描文件后缀
+/// File extensions scanned by default
 pub const DEFAULT_EXTENSIONS: &[&str] =
     &["doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "pdf", "md"];
 
-/// 加载后的应用配置
+/// Application configuration after loading
 pub struct Config {
     pub custom_extensions: Vec<String>,
     pub selected: HashSet<String>,
     pub keep_structure: bool,
-    /// None 表示首次运行，需要弹出语言选择界面
+    /// None means first run: the language picker dialog must be shown
     pub language: Option<Lang>,
 }
 
@@ -26,7 +26,7 @@ struct AppConfig {
     language: Option<Lang>,
 }
 
-/// 配置文件路径：保存在程序可执行文件相同目录下
+/// Config file path: stored in the same directory as the executable
 pub fn config_path() -> PathBuf {
     std::env::current_exe()
         .ok()
@@ -35,7 +35,8 @@ pub fn config_path() -> PathBuf {
         .join("config.json")
 }
 
-/// 读取配置；文件不存在或损坏时返回默认值（默认格式全选）
+/// Load config; falls back to defaults when the file is missing or corrupt
+/// (all default formats selected)
 pub fn load(path: &Path) -> Config {
     let cfg = std::fs::read_to_string(path)
         .ok()
@@ -63,7 +64,7 @@ pub fn load(path: &Path) -> Config {
     }
 }
 
-/// 保存配置到 json 文件
+/// Save config to a json file
 pub fn save(path: &Path, cfg: &Config) {
     let out = AppConfig {
         custom_extensions: cfg.custom_extensions.clone(),

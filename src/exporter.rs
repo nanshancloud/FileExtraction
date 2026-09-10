@@ -4,20 +4,22 @@ use rust_xlsxwriter::{Format, FormatAlign, Workbook, XlsxError};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-/// 导出结果汇总（由 UI 层翻译为状态栏消息）
+/// Summary of an export run (the UI layer turns it into a status bar message)
 pub struct ExportResult {
     pub copied: usize,
     pub total: usize,
-    /// 复制失败的源文件路径
+    /// Source paths that failed to copy
     pub failed: Vec<String>,
-    /// 清单文件保存路径（成功时）
+    /// Path of the generated list file (on success)
     pub list_path: Option<PathBuf>,
-    /// 清单导出失败原因
+    /// Reason why the Excel list failed to export
     pub list_error: Option<String>,
 }
 
-/// 将所有扫描到的文档复制到导出目录，并生成 Excel 清单。
-/// keep_structure 为 true 时按原目录结构重建子目录，否则平铺导出（重名自动加序号）。
+/// Copy all scanned documents into the export directory and generate the Excel
+/// list. When `keep_structure` is true, sub-directories are recreated following
+/// the original layout; otherwise files are exported flat with automatic
+/// renaming on name conflicts.
 pub fn export_files(
     entries: &[FileEntry],
     scan_dir: &str,
@@ -50,7 +52,7 @@ pub fn export_files(
         }
     }
 
-    // 附加产物：在同一目录生成 Excel 清单
+    // Extra artifact: generate the Excel list in the same directory
     let list_path = out_dir.join(tr.excel_filename);
     let excel_result = write_excel(entries, &list_path, tr);
 
@@ -68,7 +70,8 @@ pub fn export_files(
     }
 }
 
-/// 按原目录结构导出：重建相对于扫描目录的路径，同名冲突时重命名
+/// Structured export: rebuild the path relative to the scan root, renaming on
+/// name conflicts
 fn dest_with_structure(src: &Path, scan_root: &Path, out_dir: &Path, file_name: &str) -> PathBuf {
     let rel = src
         .strip_prefix(scan_root)
@@ -98,7 +101,8 @@ fn dest_with_structure(src: &Path, scan_root: &Path, out_dir: &Path, file_name: 
     d
 }
 
-/// 平铺导出：所有文件放在同一层，重名冲突时生成 "名称 (2).ext" 形式的唯一文件名
+/// Flat export: all files in one level; on name conflicts a unique name of the
+/// form "name (2).ext" is generated
 fn dest_flat(src: &Path, out_dir: &Path, file_name: &str, used_names: &mut HashSet<String>) -> PathBuf {
     let stem = src
         .file_stem()
@@ -118,7 +122,7 @@ fn dest_flat(src: &Path, out_dir: &Path, file_name: &str, used_names: &mut HashS
     out_dir.join(&dest_name)
 }
 
-/// 生成 Excel 清单：序号、文件名称、文件路径、文件大小(字节)、文件大小
+/// Generate the Excel list: no., file name, file path, size (bytes), size
 fn write_excel(entries: &[FileEntry], path: &Path, tr: &Tr) -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();
     let sheet = workbook.add_worksheet();
@@ -154,7 +158,7 @@ fn write_excel(entries: &[FileEntry], path: &Path, tr: &Tr) -> Result<(), XlsxEr
     Ok(())
 }
 
-/// 人类可读的文件大小（如 "1.25 MB"）
+/// Human readable file size (e.g. "1.25 MB")
 pub fn human_size(bytes: u64) -> String {
     const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
     let mut size = bytes as f64;

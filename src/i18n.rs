@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-/// 运行时格式化：将模板中的 "{}" 依次替换为参数。
-/// 单趟扫描：只在未处理的尾部查找占位符，
-/// 保证参数内容即使包含 "{}" 也不会被二次替换；
-/// 参数耗尽后剩余占位符原样保留，多余参数被忽略。
+/// Runtime formatting: replace each "{}" in the template with the arguments in order.
+/// Single pass: placeholders are only searched in the not-yet-processed tail, so
+/// arguments containing "{}" are never re-substituted. Once arguments run out the
+/// remaining placeholders are kept as-is; extra arguments are ignored.
 pub fn tf(template: &str, args: &[&dyn std::fmt::Display]) -> String {
     use std::fmt::Write as _;
 
@@ -18,7 +18,7 @@ pub fn tf(template: &str, args: &[&dyn std::fmt::Display]) -> String {
             Some(arg) => {
                 let _ = write!(out, "{arg}");
             }
-            None => out.push_str("{}"), // 无剩余参数：占位符原样保留
+            None => out.push_str("{}"), // no arguments left: keep the placeholder as-is
         }
         rest = &tail["{}".len()..];
     }
@@ -26,7 +26,7 @@ pub fn tf(template: &str, args: &[&dyn std::fmt::Display]) -> String {
     out
 }
 
-/// 支持的语言
+/// Supported languages
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Lang {
     #[serde(rename = "en")]
@@ -43,7 +43,7 @@ pub enum Lang {
     Fr,
 }
 
-/// 下拉框中始终显示语言自身的名称
+/// The drop-down always shows each language in its native name
 impl Lang {
     pub const ALL: [Lang; 6] = [
         Lang::En,
@@ -77,7 +77,7 @@ impl Lang {
     }
 }
 
-/// 全部界面文案。带参数的字符串使用 "{}" 占位，配合 format! 使用。
+/// All UI texts. Parameterized strings use "{}" placeholders filled via `tf()`.
 pub struct Tr {
     pub app_title: &'static str,
     pub scan_dir_label: &'static str,
@@ -115,6 +115,10 @@ pub struct Tr {
     pub col_name: &'static str,
     pub col_path: &'static str,
     pub col_size: &'static str,
+    /// Column header annotation: file name column (double-click to open file)
+    pub col_name_dblclick: &'static str,
+    /// Column header annotation: file path column (double-click to open folder)
+    pub col_path_dblclick: &'static str,
 
     pub sheet_name: &'static str,
     pub excel_bytes: &'static str,
@@ -175,6 +179,9 @@ static EN: Tr = Tr {
     col_path: "File Path",
     col_size: "Size",
 
+    col_name_dblclick: "double-click to open",
+    col_path_dblclick: "double-click to open folder",
+
     sheet_name: "Scan List",
     excel_bytes: "Size (bytes)",
     excel_size: "Size",
@@ -233,6 +240,9 @@ static ZH: Tr = Tr {
     col_name: "文件名称",
     col_path: "文件路径",
     col_size: "文件大小",
+
+    col_name_dblclick: "双击打开",
+    col_path_dblclick: "双击打开所在目录",
 
     sheet_name: "扫描清单",
     excel_bytes: "文件大小(字节)",
@@ -293,6 +303,9 @@ static JA: Tr = Tr {
     col_path: "ファイルパス",
     col_size: "サイズ",
 
+    col_name_dblclick: "ダブルクリックで開く",
+    col_path_dblclick: "ダブルクリックでフォルダを開く",
+
     sheet_name: "スキャン一覧",
     excel_bytes: "サイズ（バイト）",
     excel_size: "サイズ",
@@ -351,6 +364,9 @@ static ES: Tr = Tr {
     col_name: "Nombre de archivo",
     col_path: "Ruta",
     col_size: "Tamaño",
+
+    col_name_dblclick: "doble clic para abrir",
+    col_path_dblclick: "doble clic para abrir carpeta",
 
     sheet_name: "Lista de escaneo",
     excel_bytes: "Tamaño (bytes)",
@@ -411,6 +427,9 @@ static FR: Tr = Tr {
     col_path: "Chemin",
     col_size: "Taille",
 
+    col_name_dblclick: "double-clic pour ouvrir",
+    col_path_dblclick: "double-clic pour ouvrir le dossier",
+
     sheet_name: "Liste de scan",
     excel_bytes: "Taille (octets)",
     excel_size: "Taille",
@@ -469,6 +488,9 @@ static ZH_TW: Tr = Tr {
     col_name: "檔案名稱",
     col_path: "檔案路徑",
     col_size: "檔案大小",
+
+    col_name_dblclick: "雙擊開啟",
+    col_path_dblclick: "雙擊開啟所在目錄",
 
     sheet_name: "掃描清單",
     excel_bytes: "檔案大小(位元組)",
