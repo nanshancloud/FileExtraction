@@ -11,7 +11,7 @@ fn main() {
         res.set("ProductName", "FileExtraction");
         res.set("FileDescription", "File Extraction Tool");
         res.set("OriginalFilename", "FileExtraction.exe");
-        res.set("LegalCopyright", "power by Yang Haijun (LN1217)");
+        res.set("LegalCopyright", "Copyright (c) Eric Yeung");
 
         // Never fail the build because of missing resource tooling
         if let Err(e) = res.compile() {
