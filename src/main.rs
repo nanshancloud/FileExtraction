@@ -5,6 +5,7 @@ mod config;
 mod exporter;
 mod fonts;
 mod i18n;
+mod icon;
 mod scanner;
 
 use crate::app::FileSearchApp;
@@ -12,10 +13,21 @@ use crate::fonts::setup_cjk_fonts;
 use eframe::egui;
 
 fn main() -> eframe::Result<()> {
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1150.0, 660.0])
+        .with_title(i18n::Lang::En.tr().app_title);
+
+    // Window icon: shown in the taskbar and the window title bar
+    if let Some(logo) = icon::load_logo() {
+        viewport = viewport.with_icon(egui::IconData {
+            rgba: logo.rgba,
+            width: logo.width,
+            height: logo.height,
+        });
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1150.0, 660.0])
-            .with_title(i18n::Lang::En.tr().app_title),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(

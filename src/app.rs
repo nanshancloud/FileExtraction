@@ -1,11 +1,15 @@
-use crate::config::{self, Config};
+use crate::config::{self, Config, ExtCategory};
 use crate::exporter::{self, ExportResult};
 use crate::i18n::{tf, Lang, Tr};
+use crate::icon;
 use crate::scanner::{self, FileEntry, ScanState};
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
+
+/// Copyright notice shown at the bottom-right corner
+const COPYRIGHT: &str = "POWER  BY Eric Yeung）";
 
 /// Open a file with the system default associated program (double-click action)
 fn open_file(path: &str) {
@@ -43,15 +47,19 @@ pub struct FileSearchApp {
     picker_lang: Lang,
     scan_dir: String,
     entries: Vec<FileEntry>,
-    custom_extensions: Vec<String>,
+    /// User-added extensions per category id
+    custom_extensions: BTreeMap<String, Vec<String>>,
     selected: HashSet<String>,
-    new_ext: String,
+    /// Text buffer of the "add extension" input of each category
+    new_ext: BTreeMap<String, String>,
     keep_structure: bool,
     /// File name search keyword (filters the table in real time)
     search: String,
     status: String,
     scan: Option<ScanState>,
     config_path: PathBuf,
+    /// Cached logo texture for the UI (loaded lazily on the first frame)
+    logo_tex: Option<egui::TextureHandle>,
 }
 
 impl FileSearchApp {
@@ -70,13 +78,183 @@ impl FileSearchApp {
             entries: Vec::new(),
             custom_extensions: cfg.custom_extensions,
             selected: cfg.selected,
-            new_ext: String::new(),
+            new_ext: BTreeMap::new(),
             keep_structure: cfg.keep_structure,
             search: String::new(),
             status: lang.tr().status_pick_dir.to_string(),
             scan: None,
             config_path,
+            logo_tex: None,
         }
+    }
+
+    /// UI text of a built-in extension category
+    fn category_label(&self, cat: ExtCategory) -> &'static str {
+        let tr = self.tr();
+        match cat {
+            ExtCategory::DefaultFormat => tr.cat_default,
+            ExtCategory::ReportTemplate => tr.cat_report_template,
+        }
+    }
+
+    /// User-added extensions of one category
+    fn custom_of(&self, cat: ExtCategory) -> Vec<String> {
+        self.custom_extensions
+            .get(cat.id())
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Render one collapsible category block: header row with a hover-only
+    /// "select all" button, extension checkboxes and an "add extension" row.
+    fn category_section(
+        &mut self,
+        ui: &mut egui::Ui,
+        cat: ExtCategory,
+        tr: &Tr,
+        changed: &mut bool,
+    ) {
+        let ctx = ui.ctx().clone();
+        let open_id = ui.make_persistent_id((cat.id(), "open"));
+        let hover_id = ui.make_persistent_id((cat.id(), "hover"));
+
+        // Collapse state and last frame's hover state are kept in egui memory
+        let mut open = ctx.data_mut(|d| d.get_temp::<bool>(open_id)).unwrap_or(true);
+        let hovered_prev = ctx.data(|d| d.get_temp::<bool>(hover_id)).unwrap_or(false);
+
+        let ext_list = cat.extensions();
+        let custom_list = self.custom_of(cat);
+        let total = ext_list.len() + custom_list.len();
+        let selected_count = ext_list
+            .iter()
+            .filter(|e| self.selected.contains(**e))
+            .count()
+            + custom_list
+                .iter()
+                .filter(|e| self.selected.contains(e.as_str()))
+                .count();
+
+        let title = tf(
+            tr.category_progress,
+            &[&self.category_label(cat), &selected_count, &total],
+        );
+
+        // Once everything is selected the button flips to "deselect all"
+        let all_selected = total > 0 && selected_count == total;
+
+        // Header row: disclosure arrow + title on the left, the select/deselect
+        // button appears at the end of the row only while the pointer hovers it
+        let row = ui.horizontal(|ui| {
+            let arrow = if open { "▼" } else { "▶" };
+            if ui.small_button(arrow).clicked() {
+                open = !open;
+            }
+            ui.label(egui::RichText::new(title).strong());
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if hovered_prev {
+                    let label = if all_selected {
+                        tr.deselect_all
+                    } else {
+                        tr.select_all
+                    };
+                    if ui.small_button(label).clicked() {
+                        for e in ext_list {
+                            if all_selected {
+                                self.selected.remove(*e);
+                            } else {
+                                self.selected.insert(e.to_string());
+                            }
+                        }
+                        for e in &custom_list {
+                            if all_selected {
+                                self.selected.remove(e.as_str());
+                            } else {
+                                self.selected.insert(e.clone());
+                            }
+                        }
+                        *changed = true;
+                    }
+                } else {
+                    // Reserve the same space so the row does not jump
+                    ui.allocate_space(egui::vec2(80.0, 0.0));
+                }
+            });
+        });
+
+        // Remember hover for the next frame (avoids layout jitter)
+        let hovered_now = ctx
+            .pointer_hover_pos()
+            .map_or(false, |p| row.response.rect.contains(p));
+        ctx.data_mut(|d| d.insert_temp(hover_id, hovered_now));
+        ctx.data_mut(|d| d.insert_temp(open_id, open));
+
+        if !open {
+            return;
+        }
+
+        ui.indent(cat.id(), |ui| {
+            // Built-in extensions of this category
+            for ext in ext_list.iter().map(|s| s.to_string()).collect::<Vec<_>>() {
+                let mut sel = self.selected.contains(&ext);
+                if ui.checkbox(&mut sel, &ext).changed() {
+                    if sel {
+                        self.selected.insert(ext.clone());
+                    } else {
+                        self.selected.remove(&ext);
+                    }
+                    *changed = true;
+                }
+            }
+
+            // User-added extensions of this category (removable)
+            for ext in &custom_list {
+                ui.horizontal(|ui| {
+                    let mut sel = self.selected.contains(ext);
+                    if ui.checkbox(&mut sel, ext).changed() {
+                        if sel {
+                            self.selected.insert(ext.clone());
+                        } else {
+                            self.selected.remove(ext);
+                        }
+                        *changed = true;
+                    }
+                    if ui.small_button(tr.delete).clicked() {
+                        if let Some(list) = self.custom_extensions.get_mut(cat.id()) {
+                            list.retain(|e| e != ext);
+                        }
+                        self.selected.remove(ext);
+                        *changed = true;
+                    }
+                });
+            }
+
+            // Add-extension row at the end of the category
+            ui.horizontal(|ui| {
+                let buf = self.new_ext.entry(cat.id().to_string()).or_default();
+                ui.add(
+                    egui::TextEdit::singleline(buf)
+                        .desired_width(90.0)
+                        .hint_text(tr.add_ext_hint),
+                );
+                if ui.button(tr.add).clicked() {
+                    self.add_extension(cat);
+                }
+            });
+        });
+    }
+
+    /// Load the embedded logo into an egui texture once, then reuse it
+    fn logo_texture(&mut self, ctx: &egui::Context) -> Option<egui::TextureHandle> {
+        if self.logo_tex.is_none() {
+            let logo = icon::load_logo()?;
+            let image = egui::ColorImage::from_rgba_unmultiplied(
+                [logo.width as usize, logo.height as usize],
+                &logo.rgba,
+            );
+            self.logo_tex = Some(ctx.load_texture("app_logo", image, Default::default()));
+        }
+        self.logo_tex.clone()
     }
 
     fn tr(&self) -> &'static Tr {
@@ -103,13 +281,21 @@ impl FileSearchApp {
         self.save_config();
     }
 
-    fn add_extension(&mut self) {
+    /// Clear the "add extension" input of one category
+    fn clear_ext_input(&mut self, cat: ExtCategory) {
+        self.new_ext.insert(cat.id().to_string(), String::new());
+    }
+
+    /// Validate and add a user extension into the given category, then select it
+    fn add_extension(&mut self, cat: ExtCategory) {
         let tr = self.tr();
-        let ext = self
+        let raw = self
             .new_ext
-            .trim()
-            .trim_start_matches('.')
-            .to_lowercase();
+            .get(cat.id())
+            .cloned()
+            .unwrap_or_default();
+        let ext = raw.trim().trim_start_matches('.').to_lowercase();
+
         if ext.is_empty() {
             return;
         }
@@ -117,16 +303,23 @@ impl FileSearchApp {
             self.status = tf(tr.invalid_ext, &[&ext]);
             return;
         }
-        let exists_default = config::DEFAULT_EXTENSIONS.iter().any(|d| *d == ext);
-        let exists_custom = self.custom_extensions.iter().any(|c| *c == ext);
-        if exists_default || exists_custom {
+        let exists_builtin = config::default_extensions().iter().any(|d| *d == ext.as_str());
+        let exists_custom = self
+            .custom_extensions
+            .values()
+            .any(|list| list.iter().any(|e| *e == ext));
+        if exists_builtin || exists_custom {
             self.status = tf(tr.ext_exists, &[&ext]);
-            self.new_ext.clear();
+            self.clear_ext_input(cat);
             return;
         }
-        self.custom_extensions.push(ext.clone());
+
+        self.custom_extensions
+            .entry(cat.id().to_string())
+            .or_default()
+            .push(ext.clone());
         self.selected.insert(ext);
-        self.new_ext.clear();
+        self.clear_ext_input(cat);
         self.save_config();
         self.status = tr.added_ext.to_string();
     }
@@ -272,6 +465,13 @@ impl eframe::App for FileSearchApp {
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
+                // Application logo
+                if let Some(tex) = self.logo_texture(ctx) {
+                    ui.add(
+                        egui::Image::new(&tex)
+                            .fit_to_exact_size(egui::vec2(22.0, 22.0)),
+                    );
+                }
                 ui.strong(tr.scan_dir_label);
                 ui.add(
                     egui::TextEdit::singleline(&mut self.scan_dir)
@@ -327,7 +527,7 @@ impl eframe::App for FileSearchApp {
             ui.add_space(4.0);
         });
 
-        // Bottom status bar
+        // Bottom status bar: status text on the left, copyright on the right
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.separator();
             ui.horizontal(|ui| {
@@ -335,6 +535,10 @@ impl eframe::App for FileSearchApp {
                     ui.spinner();
                 }
                 ui.label(self.status.clone());
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(egui::RichText::new(COPYRIGHT).weak().small());
+                });
             });
         });
 
@@ -349,57 +553,12 @@ impl eframe::App for FileSearchApp {
 
                 let mut changed = false;
 
-                ui.label(egui::RichText::new(tr.default_formats).strong());
-                for ext in config::DEFAULT_EXTENSIONS.iter() {
-                    let ext = ext.to_string();
-                    let mut sel = self.selected.contains(&ext);
-                    if ui.checkbox(&mut sel, &ext).changed() {
-                        if sel {
-                            self.selected.insert(ext.clone());
-                        } else {
-                            self.selected.remove(&ext);
-                        }
-                        changed = true;
-                    }
+                // Top-level collapsible blocks: one per category
+                for cat in ExtCategory::ALL.iter() {
+                    self.category_section(ui, *cat, tr, &mut changed);
+                    ui.separator();
                 }
 
-                ui.separator();
-                ui.label(egui::RichText::new(tr.custom_formats).strong());
-                if self.custom_extensions.is_empty() {
-                    ui.label(egui::RichText::new(tr.no_custom).weak().small());
-                }
-                let customs = self.custom_extensions.clone();
-                for ext in customs {
-                    ui.horizontal(|ui| {
-                        let mut sel = self.selected.contains(&ext);
-                        if ui.checkbox(&mut sel, &ext).changed() {
-                            if sel {
-                                self.selected.insert(ext.clone());
-                            } else {
-                                self.selected.remove(&ext);
-                            }
-                            changed = true;
-                        }
-                        if ui.small_button(tr.delete).clicked() {
-                            self.custom_extensions.retain(|e| *e != ext);
-                            self.selected.remove(&ext);
-                            changed = true;
-                        }
-                    });
-                }
-
-                ui.separator();
-                ui.label(egui::RichText::new(tr.add_ext).strong());
-                ui.horizontal(|ui| {
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.new_ext)
-                            .desired_width(90.0)
-                            .hint_text(tr.add_ext_hint),
-                    );
-                    if ui.button(tr.add).clicked() {
-                        self.add_extension();
-                    }
-                });
                 ui.label(egui::RichText::new(tr.auto_save_hint).weak().small());
                 ui.label(egui::RichText::new(self.config_path.display().to_string()).small().weak());
 
