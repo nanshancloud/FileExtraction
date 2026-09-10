@@ -7,7 +7,8 @@ pub struct Logo {
     pub height: u32,
 }
 
-/// Embedded logo file (256x256 PNG)
+/// Embedded logo file (512x512 PNG, drawn programmatically so it carries no
+/// watermark or third-party signature)
 const LOGO_PNG: &[u8] = include_bytes!("../assets/logo.png");
 
 /// Decode the embedded logo into RGBA8 pixels.

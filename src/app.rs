@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 
 /// Copyright notice shown at the bottom-right corner
-const COPYRIGHT: &str = "POWER  BY Eric Yeung）";
+const COPYRIGHT: &str = "POWER  BY Eric Yeung";
 
 /// Open a file with the system default associated program (double-click action)
 fn open_file(path: &str) {
@@ -40,7 +40,7 @@ fn open_containing_folder(path: &str) {
 }
 
 /// Main application state
-pub struct FileSearchApp {
+pub struct FileExtractionApp {
     lang: Lang,
     /// Whether to show the language picker dialog on first run
     need_pick_lang: bool,
@@ -62,7 +62,7 @@ pub struct FileSearchApp {
     logo_tex: Option<egui::TextureHandle>,
 }
 
-impl FileSearchApp {
+impl FileExtractionApp {
     pub fn new() -> Self {
         let config_path = config::config_path();
         let cfg: Config = config::load(&config_path);
@@ -394,7 +394,7 @@ impl FileSearchApp {
     }
 }
 
-impl eframe::App for FileSearchApp {
+impl eframe::App for FileExtractionApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // First run: language picker dialog (UI texts switch live with the selection)
         if self.need_pick_lang {

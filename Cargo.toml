@@ -1,5 +1,5 @@
 [package]
-name = "FileSearch"
+name = "FileExtraction"
 version = "0.1.0"
 edition = "2024"
 
@@ -12,3 +12,6 @@ rust_xlsxwriter = "0.79"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 png = "0.17"
+
+[build-dependencies]
+winresource = "0.1"

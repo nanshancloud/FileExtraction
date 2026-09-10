@@ -145,7 +145,7 @@ pub struct Tr {
 }
 
 static EN: Tr = Tr {
-    app_title: "File Scan Tool",
+    app_title: "FileExtraction",
     scan_dir_label: "Scan directory:",
     dir_hint: "Click the button on the right to choose a directory",
     choose_dir: "Browse...",
@@ -208,7 +208,7 @@ static EN: Tr = Tr {
 };
 
 static ZH: Tr = Tr {
-    app_title: "文件扫描清单工具",
+    app_title: "FileExtraction",
     scan_dir_label: "扫描目录:",
     dir_hint: "点击右侧按钮选择目录",
     choose_dir: "选择目录...",
@@ -271,7 +271,7 @@ static ZH: Tr = Tr {
 };
 
 static JA: Tr = Tr {
-    app_title: "ファイルスキャンツール",
+    app_title: "FileExtraction",
     scan_dir_label: "スキャンディレクトリ:",
     dir_hint: "右のボタンをクリックしてディレクトリを選択",
     choose_dir: "参照...",
@@ -334,7 +334,7 @@ static JA: Tr = Tr {
 };
 
 static ES: Tr = Tr {
-    app_title: "Herramienta de escaneo de archivos",
+    app_title: "FileExtraction",
     scan_dir_label: "Directorio de escaneo:",
     dir_hint: "Haga clic en el botón de la derecha para elegir un directorio",
     choose_dir: "Examinar...",
@@ -397,7 +397,7 @@ static ES: Tr = Tr {
 };
 
 static FR: Tr = Tr {
-    app_title: "Outil de scan de fichiers",
+    app_title: "FileExtraction",
     scan_dir_label: "Répertoire de scan :",
     dir_hint: "Cliquez sur le bouton à droite pour choisir un répertoire",
     choose_dir: "Parcourir...",
@@ -460,7 +460,7 @@ static FR: Tr = Tr {
 };
 
 static ZH_TW: Tr = Tr {
-    app_title: "檔案掃描清單工具",
+    app_title: "FileExtraction",
     scan_dir_label: "掃描目錄:",
     dir_hint: "點擊右側按鈕選擇目錄",
     choose_dir: "選擇目錄...",

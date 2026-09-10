@@ -8,7 +8,7 @@ mod i18n;
 mod icon;
 mod scanner;
 
-use crate::app::FileSearchApp;
+use crate::app::FileExtractionApp;
 use crate::fonts::setup_cjk_fonts;
 use eframe::egui;
 
@@ -31,11 +31,11 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
     eframe::run_native(
-        "FileSearch",
+        "FileExtraction",
         options,
         Box::new(|cc| {
             setup_cjk_fonts(&cc.egui_ctx);
-            Ok(Box::new(FileSearchApp::new()))
+            Ok(Box::new(FileExtractionApp::new()))
         }),
     )
 }
