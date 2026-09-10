@@ -125,6 +125,9 @@ pub struct Tr {
     pub lang_title: &'static str,
     pub lang_ok: &'static str,
 
+    pub search_hint: &'static str,
+    pub no_match: &'static str,
+
     pub mode_structure: &'static str,
     pub mode_flat: &'static str,
     pub exported_to: &'static str,
@@ -180,6 +183,9 @@ static EN: Tr = Tr {
     language: "Language:",
     lang_title: "Select Language",
     lang_ok: "Start",
+
+    search_hint: "Search file name...",
+    no_match: "No files matching \"{}\"",
 
     mode_structure: " (folder structure)",
     mode_flat: " (flat)",
@@ -237,6 +243,9 @@ static ZH: Tr = Tr {
     lang_title: "请选择语言",
     lang_ok: "开始使用",
 
+    search_hint: "搜索文件名...",
+    no_match: "没有匹配 \"{}\" 的文件",
+
     mode_structure: "（按原目录结构）",
     mode_flat: "（平铺）",
     exported_to: "已导出 {}/{} 个文档{}到 {}",
@@ -292,6 +301,9 @@ static JA: Tr = Tr {
     language: "言語:",
     lang_title: "言語を選択してください",
     lang_ok: "開始",
+
+    search_hint: "ファイル名を検索...",
+    no_match: "\"{}\" に一致するファイルはありません",
 
     mode_structure: "（元のフォルダ構造）",
     mode_flat: "（フラット）",
@@ -349,6 +361,9 @@ static ES: Tr = Tr {
     lang_title: "Seleccionar idioma",
     lang_ok: "Comenzar",
 
+    search_hint: "Buscar por nombre de archivo...",
+    no_match: "Ningún archivo coincide con \"{}\"",
+
     mode_structure: " (estructura original)",
     mode_flat: " (plano)",
     exported_to: "Exportados {}/{} documentos{} a {}",
@@ -405,6 +420,9 @@ static FR: Tr = Tr {
     lang_title: "Sélectionner la langue",
     lang_ok: "Démarrer",
 
+    search_hint: "Rechercher un nom de fichier...",
+    no_match: "Aucun fichier correspondant à \"{}\"",
+
     mode_structure: " (structure d'origine)",
     mode_flat: " (à plat)",
     exported_to: "{}/{} documents exportés{} vers {}",
@@ -460,6 +478,9 @@ static ZH_TW: Tr = Tr {
     language: "語言:",
     lang_title: "請選擇語言",
     lang_ok: "開始使用",
+
+    search_hint: "搜尋檔案名稱...",
+    no_match: "沒有符合 \"{}\" 的檔案",
 
     mode_structure: "（按原目錄結構）",
     mode_flat: "（平鋪）",

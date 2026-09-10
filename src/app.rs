@@ -19,6 +19,8 @@ pub struct FileSearchApp {
     selected: HashSet<String>,
     new_ext: String,
     keep_structure: bool,
+    /// 文件名搜索关键字（实时过滤表格）
+    search: String,
     status: String,
     scan: Option<ScanState>,
     config_path: PathBuf,
@@ -42,6 +44,7 @@ impl FileSearchApp {
             selected: cfg.selected,
             new_ext: String::new(),
             keep_structure: cfg.keep_structure,
+            search: String::new(),
             status: lang.tr().status_pick_dir.to_string(),
             scan: None,
             config_path,
@@ -274,6 +277,24 @@ impl eframe::App for FileSearchApp {
                 {
                     self.save_config();
                 }
+
+                // 右上角：文件名搜索框，实时过滤表格
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let clear_button = ui.add_enabled(
+                        !self.search.is_empty(),
+                        egui::Button::new("✕").small(),
+                    );
+                    if clear_button.clicked() {
+                        self.search.clear();
+                        clear_button.surrender_focus();
+                    }
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.search)
+                            .desired_width(200.0)
+                            .hint_text(tr.search_hint)
+                            .clip_text(true),
+                    );
+                });
             });
             ui.add_space(4.0);
         });
@@ -380,7 +401,7 @@ impl eframe::App for FileSearchApp {
                 }
             });
 
-        // 中间结果表格
+        // 中间结果表格（按搜索关键字过滤文件名）
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.entries.is_empty() {
                 let msg = if self.scan.is_some() {
@@ -390,6 +411,22 @@ impl eframe::App for FileSearchApp {
                 };
                 ui.centered_and_justified(|ui| {
                     ui.label(egui::RichText::new(msg).weak().size(16.0));
+                });
+                return;
+            }
+
+            let keyword = self.search.trim().to_lowercase();
+            let filtered: Vec<&FileEntry> = self
+                .entries
+                .iter()
+                .filter(|e| {
+                    keyword.is_empty() || e.name.to_lowercase().contains(&keyword)
+                })
+                .collect();
+
+            if filtered.is_empty() {
+                ui.centered_and_justified(|ui| {
+                    ui.label(egui::RichText::new(tf(tr.no_match, &[&self.search])).weak().size(16.0));
                 });
                 return;
             }
@@ -410,7 +447,7 @@ impl eframe::App for FileSearchApp {
                     }
                 })
                 .body(|mut body| {
-                    for (i, e) in self.entries.iter().enumerate() {
+                    for (i, e) in filtered.iter().enumerate() {
                         body.row(22.0, |mut row| {
                             row.col(|ui| {
                                 ui.monospace(format!("{}", i + 1));
