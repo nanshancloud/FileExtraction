@@ -1,14 +1,29 @@
 use serde::{Deserialize, Serialize};
 
-/// 运行时格式化：将模板中的 "{}" 依次替换为参数
+/// 运行时格式化：将模板中的 "{}" 依次替换为参数。
+/// 单趟扫描：只在未处理的尾部查找占位符，
+/// 保证参数内容即使包含 "{}" 也不会被二次替换；
+/// 参数耗尽后剩余占位符原样保留，多余参数被忽略。
 pub fn tf(template: &str, args: &[&dyn std::fmt::Display]) -> String {
-    let mut s = template.to_string();
-    for a in args {
-        if let Some(pos) = s.find("{}") {
-            s.replace_range(pos..pos + 2, &a.to_string());
+    use std::fmt::Write as _;
+
+    let mut out = String::with_capacity(template.len() + 32);
+    let mut rest = template;
+    let mut it = args.iter();
+
+    while let Some(pos) = rest.find("{}") {
+        let (head, tail) = rest.split_at(pos);
+        out.push_str(head);
+        match it.next() {
+            Some(arg) => {
+                let _ = write!(out, "{arg}");
+            }
+            None => out.push_str("{}"), // 无剩余参数：占位符原样保留
         }
+        rest = &tail["{}".len()..];
     }
-    s
+    out.push_str(rest);
+    out
 }
 
 /// 支持的语言
