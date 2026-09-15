@@ -8,22 +8,13 @@ Built with Rust + [eframe/egui](https://github.com/emilk/egui) — a single nati
 
 ## Features
 
-- **Recursive scan** — pick a folder and recursively collect files matching the selected extensions. The scan runs on a background thread with a live progress counter.
-- **Extension categories** — built-in groups: *Default formats* (`doc`, `docx`, `ppt`, `pptx`, `xls`, `xlsx`, `txt`, `pdf`, `md`), *Report templates* (`det2app`) and *Archives* (`7z`, `rar`, `zip`, `tar`, `tar.gz`, `tar.xz`).
-- **Custom extensions** — add your own extensions to a category; they are validated, de-duplicated and saved. Compound extensions such as `tar.bz2` are supported. Select all / deselect all per category.
-- **Real-time search** — filter the result table by file name as you type.
-- **Interactive table** — double-click a file name to open it, or a path to open its containing folder.
-- **Tree ordering** — results are listed the way a directory tree is read: root files first (A-Z), then sub-directory by sub-directory (A-Z), with the files of a directory always ahead of its sub-directories.
-- **Last updated time** — every file shows its last update time (local time) in the table and in the list.
-- **Export** — copy matched documents to an output folder, flat or keeping the original folder structure, with automatic renaming on conflicts.
-- **Export list only** — generate the Excel inventory without copying any file.
-- **Excel list** — generates an `.xlsx` inventory in the export folder. Directory level columns (`1st level` … `Nth level`) are created automatically from the real folder depth, and each directory name is written once and merged over the rows it covers. Data columns: No., name, path (absolute or relative, following the setting), size, last modified (and raw bytes, optional); rows are sorted A-Z by file name. Levels a file does not reach are filled with a centered `/` placeholder.
-- **File size unit** — *Auto* (default) switches B / KB / MB / GB / TB per file size; a fixed unit can be selected in the settings and is then shown in the column header.
-- **Remember last directory** — with *Open last used directory on startup* enabled, the app restores the directory of the last scan and rescans it, bringing the previous results back immediately.
-- **Resizable columns** — drag any column separator to resize it (double-click the separator to auto-fit the content); the widths are saved with the config. Narrow columns wrap their text and the row grows accordingly.
-- **Sort by header** — double-click a column header to sort by it: first A-Z, then Z-A, then back to the default order (root files first, then sub-directory by sub-directory). A ▲ / ▼ marker shows the sorted column and direction. Sorting only rearranges the results table — **the exported Excel list is always written A-Z by file name**.
-- **Path display switch** — the settings offer *Absolute* / *Relative*, absolute by default. Relative paths start at the scan root: the root itself is `/` and every level below it is joined with `/` (e.g. `/sub folder/report.pdf`). The result table and the exported list follow the switch together; hovering a row reveals the other variant and double-click still opens the containing folder.
-- **Settings** — language switch, file size unit, path display (absolute / relative), and column management: reorder and hide columns of the result table and the Excel list.
+- **Recursive scan** — pick a folder and collect the matching files in a background thread with a live progress counter.
+- **Extension categories** — *Default formats* (`doc`, `docx`, `ppt`, `pptx`, `xls`, `xlsx`, `txt`, `pdf`, `md`), *Report templates* (`det2app`), *Archives* (`7z`, `rar`, `zip`, `tar`, `tar.gz`, `tar.xz`). Custom extensions can be added per category (compound ones such as `tar.bz2` are supported), with select all / deselect all.
+- **Result table** — filter by name as you type; results are listed in directory-tree order (root files first, then sub-directory by sub-directory); double-click a header to sort (A-Z → Z-A → default, with a ▲ / ▼ marker); drag a separator to resize a column (double-click to auto-fit, widths are saved); double-click a file name to open it, or a path to open its folder. Each file also shows its last modified time.
+- **Export** — copy the matched files to an output folder, flat or keeping the original structure with automatic renaming on conflicts, or generate the Excel list only.
+- **Excel list** — an `.xlsx` inventory sorted A-Z by file name, with directory level columns and the data columns No., name, path, size, modified (raw bytes optional).
+- **Settings** — language, size unit (Auto, or a fixed B / KB / MB / GB / TB), path display (absolute, or relative to the scan root shown as `/`), and column management (reorder / hide columns of the table and the list).
+- **Remember last directory** — optionally restore the directory of the last scan and rescan it on startup.
 - **Multi-language UI** — English, 简体中文, 繁體中文, 日本語, Español, Français, switchable at any time.
 - **Persistent settings** — selected and custom extensions, language and options are saved to `config.json` automatically.
 
