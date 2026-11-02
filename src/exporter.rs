@@ -110,7 +110,7 @@ pub fn export_list_only(
 
 /// Structured export: rebuild the path relative to the scan root, renaming on
 /// name conflicts
-fn dest_with_structure(src: &Path, scan_root: &Path, out_dir: &Path, file_name: &str) -> PathBuf {
+pub(crate) fn dest_with_structure(src: &Path, scan_root: &Path, out_dir: &Path, file_name: &str) -> PathBuf {
     let rel = src
         .strip_prefix(scan_root)
         .map(|r| r.to_path_buf())
@@ -141,7 +141,7 @@ fn dest_with_structure(src: &Path, scan_root: &Path, out_dir: &Path, file_name: 
 
 /// Flat export: all files in one level; on name conflicts a unique name of the
 /// form "name (2).ext" is generated
-fn dest_flat(src: &Path, out_dir: &Path, file_name: &str, used_names: &mut HashSet<String>) -> PathBuf {
+pub(crate) fn dest_flat(src: &Path, out_dir: &Path, file_name: &str, used_names: &mut HashSet<String>) -> PathBuf {
     let stem = src
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())

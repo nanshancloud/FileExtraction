@@ -12,6 +12,7 @@ Built with Rust + [eframe/egui](https://github.com/emilk/egui) — a single nati
 - **Extension categories** — *Default formats* (`doc`, `docx`, `ppt`, `pptx`, `xls`, `xlsx`, `txt`, `pdf`, `md`), *Report templates* (`det2app`), *Archives* (`7z`, `rar`, `zip`, `tar`, `tar.gz`, `tar.xz`). Custom extensions can be added per category (compound ones such as `tar.bz2` are supported), with select all / deselect all.
 - **Result table** — filter by name as you type; results are listed in directory-tree order (root files first, then sub-directory by sub-directory); double-click a header to sort (A-Z → Z-A → default, with a ▲ / ▼ marker); drag a separator to resize a column (double-click to auto-fit, widths are saved); double-click a file name to open it, or a path to open its folder. Each file also shows its last modified time.
 - **Export** — copy the matched files to an output folder, flat or keeping the original structure with automatic renaming on conflicts, or generate the Excel list only.
+- **Batch move** — tick the rows to move (or leave them unticked to move every scanned file), click **Move Files**, pick the destination and confirm: the files are moved flat or with the original structure, conflicts are renamed automatically, a move across volumes falls back to copy + delete, and the moved files drop out of the result list.
 - **Excel list** — an `.xlsx` inventory sorted A-Z by file name, with directory level columns and the data columns No., name, path, size, modified (raw bytes optional).
 - **Settings** — language, size unit (Auto, or a fixed B / KB / MB / GB / TB), path display (absolute, or relative to the scan root shown as `/`), and column management (reorder / hide columns of the table and the list).
 - **Remember last directory** — optionally restore the directory of the last scan and rescan it on startup.
@@ -38,7 +39,8 @@ cargo build --release     # optimized binary in target/release/
 4. Review results in the table; use the search box to filter by name.
 5. Optionally enable **Export with original folder structure**.
 6. Click **Export All Files** to copy the documents and write the Excel list, or **Export List Only** to just generate the list.
-7. Open **Settings** to change the language, or to reorder / hide the columns of the table and the list.
+7. To move files instead, tick the rows in the table, click **Move Files**, choose the destination folder and confirm the dialog.
+8. Open **Settings** to change the language, or to reorder / hide the columns of the table and the list.
 
 ## Configuration
 

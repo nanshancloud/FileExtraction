@@ -2,6 +2,7 @@ use crate::config::{self, ColumnDef, ColumnId, Config, ExtCategory, PathMode, Si
 use crate::exporter::{self, ExportResult};
 use crate::i18n::{tf, Lang, Tr};
 use crate::icon;
+use crate::mover;
 use crate::scanner::{self, FileEntry, ScanState};
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
@@ -16,6 +17,16 @@ const COPYRIGHT: &str = "POWER  BY Eric Yeung";
 const SETTINGS_LABEL_W: f32 = 150.0;
 /// Width every drop-down of the settings (and of the language dialog) uses
 const SETTINGS_COMBO_W: f32 = 170.0;
+/// Width of the checkbox column in front of the results table
+const SELECT_COL_W: f32 = 26.0;
+
+/// A move that was requested and is waiting for the confirmation of the user
+struct PendingMove {
+    /// Directory the files are moved into
+    dest: PathBuf,
+    /// Absolute paths of the files to move
+    paths: HashSet<String>,
+}
 
 /// Open a file with the system default associated program (double-click action)
 fn open_file(path: &str) {
@@ -84,6 +95,10 @@ pub struct FileExtractionApp {
     show_settings: bool,
     /// File name search keyword (filters the table in real time)
     search: String,
+    /// Paths of the rows ticked in the results table; empty moves every file
+    row_selected: HashSet<String>,
+    /// Move request waiting for the confirmation of the user
+    pending_move: Option<PendingMove>,
     status: String,
     scan: Option<ScanState>,
     config_path: PathBuf,
@@ -125,6 +140,8 @@ impl FileExtractionApp {
             width_dirty: false,
             show_settings: false,
             search: String::new(),
+            row_selected: HashSet::new(),
+            pending_move: None,
             status: lang.tr().status_pick_dir.to_string(),
             scan: None,
             config_path,
@@ -395,6 +412,8 @@ impl FileExtractionApp {
         let exts: HashSet<String> = self.selected.iter().cloned().collect();
         self.entries.clear();
         self.view.clear();
+        // Tick marks belong to the previous results
+        self.row_selected.clear();
         self.status = tr.status_scanning.to_string();
         self.scan = Some(scanner::start_scan(dir, exts, ctx));
     }
@@ -465,9 +484,9 @@ impl FileExtractionApp {
         });
     }
 
-    /// Ask the user where the export output (documents and/or list) should go
-    fn pick_export_dir(&self, tr: &Tr) -> Option<PathBuf> {
-        let mut dialog = rfd::FileDialog::new().set_title(tr.pick_dir_title);
+    /// Ask the user for a directory (export output or move destination)
+    fn pick_dir(&self, title: &str) -> Option<PathBuf> {
+        let mut dialog = rfd::FileDialog::new().set_title(title);
         if !self.scan_dir.trim().is_empty() {
             let dir = PathBuf::from(&self.scan_dir);
             if dir.is_dir() {
@@ -480,7 +499,7 @@ impl FileExtractionApp {
     /// Copy documents into the chosen directory and generate the Excel list
     fn export_files(&mut self) {
         let tr = self.tr();
-        let Some(out_dir) = self.pick_export_dir(tr) else {
+        let Some(out_dir) = self.pick_dir(tr.pick_dir_title) else {
             return;
         };
 
@@ -500,7 +519,7 @@ impl FileExtractionApp {
     /// Generate the Excel list only, without copying any document
     fn export_list_only(&mut self) {
         let tr = self.tr();
-        let Some(out_dir) = self.pick_export_dir(tr) else {
+        let Some(out_dir) = self.pick_dir(tr.pick_dir_title) else {
             return;
         };
 
@@ -543,6 +562,100 @@ impl FileExtractionApp {
             msg.push_str(&tf(tr.copy_fail, &[&result.failed.len()]));
         }
         msg
+    }
+
+    /// Pick a destination and queue the confirmation dialog. With no row ticked
+    /// every scanned file is moved; otherwise only the ticked ones are.
+    fn request_move(&mut self) {
+        let tr = self.tr();
+        let paths: HashSet<String> = if self.row_selected.is_empty() {
+            self.entries.iter().map(|e| e.path.clone()).collect()
+        } else {
+            self.row_selected.clone()
+        };
+        if paths.is_empty() {
+            return;
+        }
+        let Some(dest) = self.pick_dir(tr.pick_move_dir_title) else {
+            return;
+        };
+        self.pending_move = Some(PendingMove { dest, paths });
+    }
+
+    /// Run the confirmed move and drop the moved files from the results
+    fn do_move(&mut self, dest: PathBuf, paths: HashSet<String>) {
+        let tr = self.tr();
+        let targets: Vec<FileEntry> = self
+            .entries
+            .iter()
+            .filter(|e| paths.contains(&e.path))
+            .cloned()
+            .collect();
+        let result = mover::move_files(&targets, &self.scan_dir, &dest, self.keep_structure);
+        let total = result.total;
+
+        // Files that reached the destination no longer exist where they were
+        // found, so they leave the result list right away
+        let moved: HashSet<&str> = result.moved.iter().map(|s| s.as_str()).collect();
+        self.entries.retain(|e| !moved.contains(e.path.as_str()));
+        self.row_selected.retain(|p| !moved.contains(p.as_str()));
+        self.apply_sort();
+
+        let mode = if self.keep_structure {
+            tr.mode_structure
+        } else {
+            tr.mode_flat
+        };
+        let mut msg = tf(
+            tr.moved_to,
+            &[&result.moved.len(), &total, &mode, &dest.display()],
+        );
+        if !result.failed.is_empty() {
+            msg.push_str(&tf(tr.move_fail, &[&result.failed.len()]));
+        }
+        self.status = msg;
+    }
+
+    /// Confirmation dialog shown before a move: moving changes the original
+    /// files, so it never starts from a single click
+    fn move_confirm_window(&mut self, ctx: &egui::Context) {
+        let tr = self.tr();
+        let Some(pending) = self.pending_move.take() else {
+            return;
+        };
+        let count = pending.paths.len();
+        let dest = pending.dest.clone();
+        let mut open = true;
+        let mut confirmed = false;
+        let mut cancelled = false;
+
+        egui::Window::new(tr.move_confirm_title)
+            .open(&mut open)
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_min_width(420.0);
+                ui.label(tf(tr.move_confirm_msg, &[&count, &dest.display()]));
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    if ui.button(tr.confirm_ok).clicked() {
+                        confirmed = true;
+                    }
+                    if ui.button(tr.confirm_cancel).clicked() {
+                        cancelled = true;
+                    }
+                });
+            });
+
+        if cancelled {
+            open = false;
+        }
+        if confirmed {
+            self.do_move(dest, pending.paths);
+        } else if open {
+            self.pending_move = Some(pending);
+        }
     }
 
     /// Settings window: language switch plus column order / visibility
@@ -890,6 +1003,18 @@ impl eframe::App for FileExtractionApp {
                 {
                     self.export_list_only();
                 }
+                // Move: the ticked rows, or every scanned file when none is ticked
+                let move_label = if self.row_selected.is_empty() {
+                    tr.move_files.to_string()
+                } else {
+                    tf(tr.move_selected_count, &[&self.row_selected.len()])
+                };
+                if ui
+                    .add_enabled(can_export, egui::Button::new(move_label))
+                    .clicked()
+                {
+                    self.request_move();
+                }
                 if ui
                     .checkbox(&mut self.keep_structure, tr.keep_structure)
                     .changed()
@@ -989,9 +1114,10 @@ impl eframe::App for FileExtractionApp {
             let line_height = ui.text_style_height(&egui::TextStyle::Body).max(14.0);
             let font_size = egui::TextStyle::Body.resolve(ui.style()).size;
             let widths: Vec<f32> = visible.iter().map(|c| c.width()).collect();
-            // egui_extras names the drag handles of the column separators like this
+            // egui_extras names the drag handles of the column separators like
+            // this; the checkbox column sits in front of them, hence the offset
             let resize_ids: Vec<egui::Id> = (0..visible.len())
-                .map(|i| ui.id().with("resize_column").with(i))
+                .map(|i| ui.id().with("resize_column").with(i + 1))
                 .collect();
 
             // Filled by the table: real column widths and the header that was
@@ -1013,15 +1139,42 @@ impl eframe::App for FileExtractionApp {
                 if filtered.is_empty() {
                     no_match = true;
                 } else {
+                    // The tick marks live outside of `self` while the table is
+                    // built: the rows borrow `self.entries` at the same time
+                    let mut sel = std::mem::take(&mut self.row_selected);
+                    let all_ticked = filtered.iter().all(|e| sel.contains(&e.path));
+
                     let mut table = TableBuilder::new(ui)
                         .striped(true)
                         .resizable(true)
                         .cell_layout(egui::Layout::left_to_right(egui::Align::Center));
+                    // Checkbox column in front of the data columns
+                    table = table.column(
+                        Column::initial(SELECT_COL_W)
+                            .at_least(SELECT_COL_W)
+                            .at_most(SELECT_COL_W)
+                            .resizable(false),
+                    );
                     for c in &visible {
                         table = table.column(table_column(c.id, c.width()));
                     }
                     table
                         .header(28.0, |mut header| {
+                            // Tick or untick every row that is currently listed
+                            header.col(|ui| {
+                                let mut all = all_ticked;
+                                let r = ui.add(egui::Checkbox::without_text(&mut all));
+                                if r.changed() {
+                                    for e in &filtered {
+                                        if all {
+                                            sel.insert(e.path.clone());
+                                        } else {
+                                            sel.remove(&e.path);
+                                        }
+                                    }
+                                }
+                                r.on_hover_text(tr.select_rows_hint);
+                            });
                             // Column headers annotate the double-click actions for name/path columns
                             let name_h = format!("{} ({})", tr.col_name, tr.col_name_dblclick);
                             let path_h = format!("{} ({})", tr.col_path, tr.col_path_dblclick);
@@ -1068,6 +1221,18 @@ impl eframe::App for FileExtractionApp {
                             body.heterogeneous_rows(heights, |mut row| {
                                 let i = row.index();
                                 let e = filtered[i];
+                                // Tick box: the rows ticked here are the ones a
+                                // move takes over
+                                row.col(|ui| {
+                                    let mut on = sel.contains(&e.path);
+                                    if ui.add(egui::Checkbox::without_text(&mut on)).changed() {
+                                        if on {
+                                            sel.insert(e.path.clone());
+                                        } else {
+                                            sel.remove(&e.path);
+                                        }
+                                    }
+                                });
                                 for c in &visible {
                                     row.col(|ui| match c.id {
                                         ColumnId::No => {
@@ -1119,6 +1284,8 @@ impl eframe::App for FileExtractionApp {
                                 }
                             });
                         });
+                    // Give the tick marks back to the app state
+                    self.row_selected = sel;
                 }
             }
 
@@ -1153,5 +1320,7 @@ impl eframe::App for FileExtractionApp {
 
         // Settings window: language switch and column management
         self.settings_window(ctx);
+        // Confirmation dialog of a pending move
+        self.move_confirm_window(ctx);
     }
 }

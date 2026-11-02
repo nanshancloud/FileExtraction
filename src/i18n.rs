@@ -175,6 +175,25 @@ pub struct Tr {
     pub list_only_done: &'static str,
     pub copy_fail: &'static str,
     pub bytes: &'static str,
+
+    /// Toolbar button: move the scanned files to another directory
+    pub move_files: &'static str,
+    /// Button label while rows are ticked: "Move selected ({})"
+    pub move_selected_count: &'static str,
+    /// Title of the destination folder dialog of a move
+    pub pick_move_dir_title: &'static str,
+    /// Status of a finished move: moved count, total, layout, destination
+    pub moved_to: &'static str,
+    /// Status suffix: how many files could not be moved
+    pub move_fail: &'static str,
+    /// Title of the confirmation dialog shown before a move
+    pub move_confirm_title: &'static str,
+    /// Body of the confirmation dialog: file count and destination
+    pub move_confirm_msg: &'static str,
+    pub confirm_ok: &'static str,
+    pub confirm_cancel: &'static str,
+    /// Hint on the checkbox column of the results table
+    pub select_rows_hint: &'static str,
 }
 
 static EN: Tr = Tr {
@@ -254,6 +273,17 @@ static EN: Tr = Tr {
     list_only_done: "List of {} file(s) generated: {}",
     copy_fail: "; {} file(s) failed to copy",
     bytes: "{} bytes",
+
+    move_files: "Move Files",
+    move_selected_count: "Move Selected ({})",
+    pick_move_dir_title: "Choose destination directory",
+    moved_to: "Moved {}/{} documents{} to {}",
+    move_fail: "; {} file(s) failed to move",
+    move_confirm_title: "Confirm move",
+    move_confirm_msg: "Move {} file(s) to {}? This cannot be undone.",
+    confirm_ok: "Move",
+    confirm_cancel: "Cancel",
+    select_rows_hint: "Tick the files to move; with nothing ticked every scanned file is moved",
 };
 
 static ZH: Tr = Tr {
@@ -333,6 +363,17 @@ static ZH: Tr = Tr {
     list_only_done: "已生成 {} 个文件的清单: {}",
     copy_fail: "；{} 个文件复制失败",
     bytes: "{} 字节",
+
+    move_files: "移动文件",
+    move_selected_count: "移动所选 ({})",
+    pick_move_dir_title: "选择移动目标目录",
+    moved_to: "已移动 {}/{} 个文档{}到 {}",
+    move_fail: "；{} 个文件移动失败",
+    move_confirm_title: "确认移动",
+    move_confirm_msg: "确定要将 {} 个文件移动到 {} 吗？此操作不可撤销。",
+    confirm_ok: "确定移动",
+    confirm_cancel: "取消",
+    select_rows_hint: "勾选要移动的文件；未勾选时移动全部扫描结果",
 };
 
 static JA: Tr = Tr {
@@ -412,6 +453,17 @@ static JA: Tr = Tr {
     list_only_done: "{} 件のファイルのリストを生成しました: {}",
     copy_fail: "；{} 個のファイルのコピーに失敗",
     bytes: "{} バイト",
+
+    move_files: "ファイルを移動",
+    move_selected_count: "選択を移動 ({})",
+    pick_move_dir_title: "移動先のディレクトリを選択",
+    moved_to: "{}/{} 個のドキュメント{}を {} に移動しました",
+    move_fail: "；{} 個のファイルの移動に失敗",
+    move_confirm_title: "移動の確認",
+    move_confirm_msg: "{} 個のファイルを {} に移動しますか？この操作は取り消せません。",
+    confirm_ok: "移動する",
+    confirm_cancel: "キャンセル",
+    select_rows_hint: "移動するファイルにチェックを付けます。未選択の場合は全件が対象です",
 };
 
 static ES: Tr = Tr {
@@ -491,6 +543,17 @@ static ES: Tr = Tr {
     list_only_done: "Lista de {} archivo(s) generada: {}",
     copy_fail: "; {} archivo(s) no se pudieron copiar",
     bytes: "{} bytes",
+
+    move_files: "Mover archivos",
+    move_selected_count: "Mover seleccionados ({})",
+    pick_move_dir_title: "Elegir directorio de destino",
+    moved_to: "Se movieron {}/{} documentos{} a {}",
+    move_fail: "; {} archivo(s) no se pudieron mover",
+    move_confirm_title: "Confirmar el movimiento",
+    move_confirm_msg: "¿Mover {} archivo(s) a {}? Esta acción no se puede deshacer.",
+    confirm_ok: "Mover",
+    confirm_cancel: "Cancelar",
+    select_rows_hint: "Marque los archivos a mover; sin marcar se mueven todos los escaneados",
 };
 
 static FR: Tr = Tr {
@@ -570,6 +633,17 @@ static FR: Tr = Tr {
     list_only_done: "Liste de {} fichier(s) générée : {}",
     copy_fail: " ; {} fichier(s) non copié(s)",
     bytes: "{} octets",
+
+    move_files: "Déplacer les fichiers",
+    move_selected_count: "Déplacer la sélection ({})",
+    pick_move_dir_title: "Choisir le dossier de destination",
+    moved_to: "{}/{} documents déplacés{} vers {}",
+    move_fail: " ; {} fichier(s) n'ont pas pu être déplacés",
+    move_confirm_title: "Confirmer le déplacement",
+    move_confirm_msg: "Déplacer {} fichier(s) vers {} ? Cette action est irréversible.",
+    confirm_ok: "Déplacer",
+    confirm_cancel: "Annuler",
+    select_rows_hint: "Cochez les fichiers à déplacer ; sans coche, tous les fichiers scannés sont déplacés",
 };
 
 static ZH_TW: Tr = Tr {
@@ -649,4 +723,15 @@ static ZH_TW: Tr = Tr {
     list_only_done: "已產生 {} 個檔案的清單: {}",
     copy_fail: "；{} 個檔案複製失敗",
     bytes: "{} 位元組",
+
+    move_files: "移動檔案",
+    move_selected_count: "移動所選 ({})",
+    pick_move_dir_title: "選擇移動目標目錄",
+    moved_to: "已移動 {}/{} 個檔案{}至 {}",
+    move_fail: "；{} 個檔案移動失敗",
+    move_confirm_title: "確認移動",
+    move_confirm_msg: "確定要將 {} 個檔案移動至 {} 嗎？此操作無法復原。",
+    confirm_ok: "確定移動",
+    confirm_cancel: "取消",
+    select_rows_hint: "勾選要移動的檔案；未勾選時移動全部掃描結果",
 };

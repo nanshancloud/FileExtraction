@@ -6,6 +6,7 @@ mod exporter;
 mod fonts;
 mod i18n;
 mod icon;
+mod mover;
 mod scanner;
 
 use crate::app::FileExtractionApp;
